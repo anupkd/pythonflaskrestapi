@@ -3,6 +3,7 @@ import datetime
 import jwt
 from app.main.model.blacklist import BlacklistToken
 from ..config import key
+import cx_Oracle
 
 class User(db.Model):
     """ User Model for storing user related details """

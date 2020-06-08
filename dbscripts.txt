@@ -1,0 +1,236 @@
+CREATE SEQUENCE INTF.EMP_SESSION_DET_SEQ
+  START WITH 1
+  MAXVALUE 9999999999999999999999999999
+  MINVALUE 1
+  NOCYCLE
+  NOCACHE
+  ORDER
+  NOKEEP
+  GLOBAL;
+  
+  CREATE SEQUENCE INTF.EMP_SESSION_SEQ
+  START WITH 1
+  MAXVALUE 9999999999999999999999999999
+  MINVALUE 1
+  NOCYCLE
+  NOCACHE
+  ORDER
+  NOKEEP
+  GLOBAL;
+
+
+ALTER TABLE INTF.TMP_EMP_DETS
+ DROP PRIMARY KEY CASCADE;
+
+DROP TABLE INTF.TMP_EMP_DETS CASCADE CONSTRAINTS;
+
+CREATE TABLE INTF.TMP_EMP_DETS
+(
+  PHONE_NO  VARCHAR2(15 BYTE)                   NOT NULL,
+  FNAME     VARCHAR2(100 BYTE),
+  LNAME     VARCHAR2(100 BYTE),
+  EMAIL     VARCHAR2(150 BYTE),
+  EMPNO     VARCHAR2(10 BYTE),
+  ISACTIVE  VARCHAR2(1 BYTE)
+)
+TABLESPACE APP_TS_LOG_INTF
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+MONITORING;
+
+
+CREATE UNIQUE INDEX INTF.TMP_EMP_DETS_PK ON INTF.TMP_EMP_DETS
+(PHONE_NO)
+LOGGING
+TABLESPACE APP_TS_LOG_INTF
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           );
+
+ALTER TABLE INTF.TMP_EMP_DETS ADD (
+  CONSTRAINT TMP_EMP_DETS_PK
+  PRIMARY KEY
+  (PHONE_NO)
+  USING INDEX INTF.TMP_EMP_DETS_PK
+  ENABLE VALIDATE);
+
+
+ALTER TABLE INTF.TMP_EMP_SESSIONS
+ DROP PRIMARY KEY CASCADE;
+
+DROP TABLE INTF.TMP_EMP_SESSIONS CASCADE CONSTRAINTS;
+
+CREATE TABLE INTF.TMP_EMP_SESSIONS
+(
+  SESSIONID       NUMBER(22,20)                 NOT NULL,
+  PHONE_NO        VARCHAR2(15 BYTE),
+  LAST_CHAT_TIME  DATE                          DEFAULT sysdate,
+  END_TIME        DATE,
+  ISACTIVE        VARCHAR2(1 BYTE)              DEFAULT 'Y'
+)
+TABLESPACE APP_TS_LOG_INTF
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+MONITORING;
+
+
+CREATE UNIQUE INDEX INTF.TMP_EMP_SESSIONS_PK ON INTF.TMP_EMP_SESSIONS
+(SESSIONID)
+LOGGING
+TABLESPACE APP_TS_LOG_INTF
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           );
+
+ALTER TABLE INTF.TMP_EMP_SESSIONS ADD (
+  CONSTRAINT TMP_EMP_SESSIONS_PK
+  PRIMARY KEY
+  (SESSIONID)
+  USING INDEX INTF.TMP_EMP_SESSIONS_PK
+  ENABLE VALIDATE);
+
+
+ALTER TABLE INTF.TMP_EMP_SESSION_DETS
+ DROP PRIMARY KEY CASCADE;
+
+DROP TABLE INTF.TMP_EMP_SESSION_DETS CASCADE CONSTRAINTS;
+
+CREATE TABLE INTF.TMP_EMP_SESSION_DETS
+(
+  ID            NUMBER(22,20),
+  SESSIONID     NUMBER(22,20),
+  VAR_NAME      VARCHAR2(100 BYTE),
+  VAR_VALUE     CLOB,
+  CREATED_DATE  DATE
+)
+LOB (VAR_VALUE) STORE AS SECUREFILE (
+  TABLESPACE  APP_TS_LOG_INTF
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  NOCACHE
+  LOGGING
+      STORAGE    (
+                  INITIAL          104K
+                  NEXT             1M
+                  MINEXTENTS       1
+                  MAXEXTENTS       UNLIMITED
+                  PCTINCREASE      0
+                  BUFFER_POOL      DEFAULT
+                 ))
+TABLESPACE APP_TS_LOG_INTF
+PCTUSED    0
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+MONITORING;
+
+
+CREATE UNIQUE INDEX INTF.TMP_EMP_SESSION_DETS_PK ON INTF.TMP_EMP_SESSION_DETS
+(ID)
+LOGGING
+TABLESPACE APP_TS_LOG_INTF
+PCTFREE    10
+INITRANS   2
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MAXSIZE          UNLIMITED
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           );
+
+ALTER TABLE INTF.TMP_EMP_SESSION_DETS ADD (
+  CONSTRAINT TMP_EMP_SESSION_DETS_PK
+  PRIMARY KEY
+  (ID)
+  USING INDEX INTF.TMP_EMP_SESSION_DETS_PK
+  ENABLE VALIDATE);
+
+
+
+CREATE OR REPLACE procEDURE INTF.USP_EMP_UPD_SESSION(
+p_phone_no varchar2,
+pmessage varchar2,
+presultcode out varchar2,
+presultmess out varchar2
+) AS
+l_sessionid number(20,0); 
+l_cnt int;
+BEGIN
+    select count(*) into l_cnt from tmp_emp_dets where phone_no = p_phone_no and isActive = 'Y' ;
+    if (l_cnt = 0) then
+        presultcode := 401;
+        presultmess := 'Phone number not found in HRMS';
+        return;
+    end if;
+    update tmp_emp_sessions set last_chat_time = sysdate where phone_no = p_phone_no and isactive = 'Y' and end_time < sysdate ;
+    if (SQL%ROWCOUNT = 0) then 
+       insert into tmp_emp_sessions (sessionid,phone_no,last_chat_time,end_time,isactive) values(EMP_SESSION_SEQ.nextval,p_phone_no,sysdate,sysdate+1,'Y');
+    end if;
+    select max(sessionid) into l_sessionid from tmp_emp_sessions  where 
+    phone_no = p_phone_no and isactive = 'Y' and end_time < sysdate ;
+    insert into TMP_EMP_SESSION_DETS (id,sessionid,var_name,var_value) values(EMP_SESSION_DET_SEQ.nextval,l_sessionid,'MESSAGE',pmessage);
+        presultcode := 200;
+        presultmess := '';
+END;
