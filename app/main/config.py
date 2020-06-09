@@ -14,6 +14,7 @@ class Config:
     account_sid =   os.getenv('account_id','ACde03e16509b548e3311e4f8744ed20bd')
     auth_token =   os.getenv('auth_token','b17e89486a7540857d0b573304273f7f') 
     WHATSAPP_SENDER_NO = ''
+    RABBITMQ_URL = 'localhost'
 
 class DevelopmentConfig(Config):
     # uncomment the line below to use postgres
@@ -52,3 +53,4 @@ ORACLE_DB_PATH = Config.ORACLE_DB_URL
 TWILIO_SID = Config.account_sid
 TWILIO_TOKEN = Config.auth_token
 WHATSAPP_SENDER_NO='whatsapp:+14155238886'
+RABBITMQ_URL = Config.RABBITMQ_URL
