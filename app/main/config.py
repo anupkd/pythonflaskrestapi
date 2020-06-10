@@ -11,8 +11,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'my_precious_secret_key')
     DEBUG = False
     ORACLE_DB_URL =  os.getenv('DATABASE_URL', '')
-    account_sid =   os.getenv('account_id','ACde03e16509b548e3311e4f8744ed20bd')
-    auth_token =   os.getenv('auth_token','b17e89486a7540857d0b573304273f7f') 
+    account_sid =   os.getenv('account_id','ACde03e16509b548e3311e4f8744')
+    auth_token =   os.getenv('auth_token','b17e89486a7540857d0b57') 
     WHATSAPP_SENDER_NO = ''
     RABBITMQ_URL = 'localhost'
 

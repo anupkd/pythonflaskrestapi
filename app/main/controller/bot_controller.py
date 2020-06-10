@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, jsonify
 from flask_restplus import Resource
 
 from app.main.service.auth_helper import Auth
@@ -18,8 +18,12 @@ bot_reply = BotDto.bot
 @api.route('/test')
 class test(Resource):
     def post(self):
-        print('1')
-        return ''
+        data = request.get_json(silent=True)
+        print(data)
+        reply = {
+            "fulfillmentText": "Reply from api",
+        }
+        return jsonify(reply)
 
 @api.route('/chat')
 class ProcessChat(Resource):

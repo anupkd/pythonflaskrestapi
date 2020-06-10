@@ -9,6 +9,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
 from app.main.util.quemanage import publismessage
 from json import JSONEncoder
+import datefinder
 
 class Messagerespo:
   def __init__(self, intent, message,menu,args):
@@ -48,8 +49,6 @@ class MessageEncoder(JSONEncoder):
 def upd_user_session(phone_no,message,body):
     con = cx_Oracle.connect(ORACLE_DB_PATH)
     cur = con.cursor()
-    #cur.execute("select sor_order_no, cst_code , cst_name  from om.om_sales_order s inner join cm.cm_customer c on c.cst_Seq = s.cst_seq    where  ort_Seq = 2 and  SOR_DELIVERED_STATUS  in ('C','BR') and Loc_Seq in (select loc_seq from am.am_location where    attribute4 ='Y')")
-    #cur.execute("select 'uname' username,'333' phone_no ,'ddd@ff.com' email  from dual")
     outVal = cur.var(str)
     outVal2 = cur.var(str)
     outSessionid = cur.var(str)
@@ -73,20 +72,20 @@ def upd_user_session(phone_no,message,body):
     answer = processmessage(phone_no,outLastIntent.getvalue(),body,json.loads(lreply) )
     sendmessage( phone_no,answer.message) 
     print(answer)  
-    upd_reply_session(con,phone_no,sessionid,answer.intent,MessageEncoder().encode(answer))
+    upd_reply_session(con,phone_no,sessionid,answer.intent,MessageEncoder().encode(answer),body)
     con.commit()
     cur.close()
     con.close()
     return    '{"status_code":"'+outVal.getvalue()+'","status_name":"'+  outVal2.getvalue() + '","sessionid":"'+  outSessionid.getvalue() + '"}'
 
-def upd_reply_session(con,phone_no,sessionid,reply_intent,message):
+def upd_reply_session(con,phone_no,sessionid,reply_intent,message,incomingmess):
     cur = con.cursor()
     #cur.execute("select sor_order_no, cst_code , cst_name  from om.om_sales_order s inner join cm.cm_customer c on c.cst_Seq = s.cst_seq    where  ort_Seq = 2 and  SOR_DELIVERED_STATUS  in ('C','BR') and Loc_Seq in (select loc_seq from am.am_location where    attribute4 ='Y')")
     print(message)
     print(reply_intent)
     outVal = cur.var(str)
     con.outputtypehandler = OutputTypeHandler
-    cur.callproc('USP_EMP_REPLY_UPDATE', [reply_intent, message , sessionid,outVal ])
+    cur.callproc('USP_EMP_REPLY_UPDATE', [reply_intent, message , sessionid,incomingmess,outVal ])
     #cur.execute("update tmp_empl_sessions set last_reply ='{}' ,last_reply_object ='{}' where sessionid={}".format(reply_intent,message,sessionid) )
     cur.close()
     return    'Success' 
@@ -157,8 +156,16 @@ def homemenuselected(mess,lreply):
 
 def payslipdownload(mess,lreply):
     sessionObj  = lreply['vars']
+    matches = datefinder.find_dates(mess)
+    monVar = ''
+    for match in matches:
+        monVar = match.strftime('%Y-%m')
+        print (match)
+    if (monVar == ''):
+        return Messagerespo('payslipdownload',"Sorry ,i didn't get you.Please try again",lreply['menu'],lreply['vars'])
+ 
     phoneno = get_data( sessionObj,"phoneno")
-    publismessage('payslip','payslip_pdf_request', QMess(phoneno=phoneno,data=mess,module='payslip-pdf').toJSON())
+    publismessage('payslip','payslip_pdf_request', QMess(phoneno=phoneno,data=monVar,module='payslip-pdf').toJSON())
     return Messagerespo('goodbye',"Your file will be send in a while .." ,'payslip',sessionObj) 
 
 def welcome(mess,lreply):

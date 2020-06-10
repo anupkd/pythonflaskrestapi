@@ -136,17 +136,18 @@ ALTER TABLE INTF.TMP_EMP_SESSIONS ADD (
   ENABLE VALIDATE);
 
 
-ALTER TABLE INTF.TMP_EMP_SESSION_DETS
+ALTER TABLE INTF.TMP_EMP_SESSION_LOGS
  DROP PRIMARY KEY CASCADE;
 
-DROP TABLE INTF.TMP_EMP_SESSION_DETS CASCADE CONSTRAINTS;
+DROP TABLE INTF.TMP_EMP_SESSION_LOGS CASCADE CONSTRAINTS;
 
-CREATE TABLE INTF.TMP_EMP_SESSION_DETS
+CREATE TABLE INTF.TMP_EMP_SESSION_LOGS
 (
-  ID            NUMBER(22,20),
-  SESSIONID     NUMBER(22,20),
+  ID            NUMBER(22,0),
+  SESSIONID     NUMBER(22,0),
   VAR_NAME      VARCHAR2(100 BYTE),
   VAR_VALUE     CLOB,
+  VAR_REQUEST  CLOB, 
   CREATED_DATE  DATE
 )
 LOB (VAR_VALUE) STORE AS SECUREFILE (
@@ -183,7 +184,7 @@ NOCACHE
 MONITORING;
 
 
-CREATE UNIQUE INDEX INTF.TMP_EMP_SESSION_DETS_PK ON INTF.TMP_EMP_SESSION_DETS
+CREATE UNIQUE INDEX INTF.TMP_EMP_SESSION_LOGS_PK ON INTF.TMP_EMP_SESSION_LOGS
 (ID)
 LOGGING
 TABLESPACE APP_TS_LOG_INTF
@@ -200,20 +201,21 @@ STORAGE    (
             BUFFER_POOL      DEFAULT
            );
 
-ALTER TABLE INTF.TMP_EMP_SESSION_DETS ADD (
-  CONSTRAINT TMP_EMP_SESSION_DETS_PK
+ALTER TABLE INTF.TMP_EMP_SESSION_LOGS ADD (
+  CONSTRAINT TMP_EMP_SESSION_LOGS_PK
   PRIMARY KEY
   (ID)
-  USING INDEX INTF.TMP_EMP_SESSION_DETS_PK
+  USING INDEX INTF.TMP_EMP_SESSION_LOGS_PK
   ENABLE VALIDATE);
-
-
 
 CREATE OR REPLACE procEDURE INTF.USP_EMP_UPD_SESSION(
 p_phone_no varchar2,
 pmessage varchar2,
 presultcode out varchar2,
-presultmess out varchar2
+presultmess out varchar2,
+psessionid out varchar2,
+p_last_reply out varchar2,
+p_last_obj out clob
 ) AS
 l_sessionid number(20,0); 
 l_cnt int;
@@ -222,15 +224,44 @@ BEGIN
     if (l_cnt = 0) then
         presultcode := 401;
         presultmess := 'Phone number not found in HRMS';
+        psessionid := '-1';
         return;
     end if;
-    update tmp_emp_sessions set last_chat_time = sysdate where phone_no = p_phone_no and isactive = 'Y' and end_time < sysdate ;
-    if (SQL%ROWCOUNT = 0) then 
-       insert into tmp_emp_sessions (sessionid,phone_no,last_chat_time,end_time,isactive) values(EMP_SESSION_SEQ.nextval,p_phone_no,sysdate,sysdate+1,'Y');
+    update tmp_empl_sessions set last_chat_time = sysdate,end_time = sysdate + (1/1440*5) where phone_no = p_phone_no and isactive = 'Y' and end_time > sysdate ;
+    if (nvl(SQL%ROWCOUNT,0) = 0) then 
+       insert into tmp_empl_sessions (sessionid,phone_no,last_chat_time,end_time,isactive) values(EMP_SESSION_SEQ.nextval,p_phone_no,sysdate,sysdate + (1/1440*5),'Y');
     end if;
-    select max(sessionid) into l_sessionid from tmp_emp_sessions  where 
-    phone_no = p_phone_no and isactive = 'Y' and end_time < sysdate ;
-    insert into TMP_EMP_SESSION_DETS (id,sessionid,var_name,var_value) values(EMP_SESSION_DET_SEQ.nextval,l_sessionid,'MESSAGE',pmessage);
+    select max(sessionid) into l_sessionid from tmp_empl_sessions  where 
+    phone_no = p_phone_no and isactive = 'Y' and end_time > sysdate ;
+    select last_reply,last_reply_object into p_last_reply,p_last_obj from  tmp_empl_sessions where sessionid =  l_sessionid;
+    /*insert into TMP_EMP_SESSION_DETS (id,sessionid,var_name,var_value,created_date) 
+    values(EMP_SESSION_DET_SEQ.nextval,l_sessionid,'MESSAGE','pmessage',sysdate);*/
         presultcode := 200;
-        presultmess := '';
+        presultmess := 'Success';
+        psessionid:= l_sessionid;
+ 
 END;
+/
+
+
+
+CREATE OR REPLACE procEDURE INTF.USP_EMP_REPLY_UPDATE(
+preply_intent varchar2,
+message clob,
+psessionid number ,
+pincomemess varchar2,
+pstatuscode out varchar2
+
+) AS
+l_sessionid number(20,0); 
+l_cnt int;
+BEGIN
+     update tmp_empl_sessions set last_chat_time = sysdate,end_time = sysdate + (1/1440*5) ,last_reply =preply_intent,
+     last_reply_object = message
+     where sessionid=  psessionid;
+       insert into TMP_EMP_SESSION_LOGS (id,sessionid,var_name,var_value,created_date,VAR_REQUEST) 
+    values(EMP_SESSION_DET_SEQ.nextval,psessionid,preply_intent,message,sysdate,pincomemess);
+  pstatuscode := '200';
+ 
+END;
+/
